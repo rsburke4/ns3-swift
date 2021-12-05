@@ -19,64 +19,58 @@
  *
  */
 
-#include "tcp-swift.h"
+#include "swift.h"
 #include "ns3/log.h"
 #include "ns3/abort.h"
 #include "ns3/tcp-socket-state.h"
 #include "ns3/simulator.h"
+#include <stdio.h>
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("TcpSwift");
+NS_LOG_COMPONENT_DEFINE ("Swift");
 
-NS_OBJECT_ENSURE_REGISTERED (TcpSwift);
+NS_OBJECT_ENSURE_REGISTERED (Swift);
 
-TypeId TcpSwift::GetTypeId (void)
-{
-  static TypeId tid = TypeId ("ns3::TcpSwift")
+TypeId Swift::GetTypeId (void) {
+  static TypeId tid = TypeId ("ns3::Swift")
     .SetParent<TcpLinuxReno> ()
-    .AddConstructor<TcpSwift> ()
-    .SetGroupName ("Internet")
+    .AddConstructor<Swift> ()
+    .SetGroupName ("Scratch")
     .AddAttribute ("SwiftShiftG",
-                   "Parameter G for updating dctcp_alpha",
+                   "Parameter G for updating Swift_alpha",
                    DoubleValue (0.0625),
-                   MakeDoubleAccessor (&TcpSwift::m_g),
+                   MakeDoubleAccessor (&Swift::m_g),
                    MakeDoubleChecker<double> (0, 1))
     .AddAttribute ("SwiftAlphaOnInit",
                    "Initial alpha value",
                    DoubleValue (1.0),
-                   MakeDoubleAccessor (&TcpSwift::InitializeDctcpAlpha),
+                   MakeDoubleAccessor (&Swift::InitializeSwiftAlpha),
                    MakeDoubleChecker<double> (0, 1))
     .AddAttribute ("UseEct0",
                    "Use ECT(0) for ECN codepoint, if false use ECT(1)",
                    BooleanValue (true),
-                   MakeBooleanAccessor (&TcpSwift::m_useEct0),
+                   MakeBooleanAccessor (&Swift::m_useEct0),
                    MakeBooleanChecker ())
     .AddTraceSource ("CongestionEstimate",
                      "Update sender-side congestion estimate state",
-                     MakeTraceSourceAccessor (&TcpSwift::m_traceCongestionEstimate),
-                     "ns3::TcpSwift::CongestionEstimateTracedCallback")
+                     MakeTraceSourceAccessor (&Swift::m_traceCongestionEstimate),
+                     "ns3::Swift::CongestionEstimateTracedCallback")
   ;
   return tid;
 }
 
-std::string TcpSwift::GetName () const
-{
-  return "TcpSwift";
+std::string Swift::GetName () const {
+  return "Swift";
 }
 
-TcpSwift::TcpSwift ()
-  : TcpLinuxReno (),
-    m_ackedBytesEcn (0),
-    m_ackedBytesTotal (0),
-    m_priorRcvNxt (SequenceNumber32 (0)),
-    m_priorRcvNxtFlag (false),
-    m_nextSeq (SequenceNumber32 (0)),
-    m_nextSeqFlag (false),
-    m_ceState (false),
-    m_delayedAckReserved (false),
-    m_initialized (false)
+Swift::Swift ()
+  : TcpLinuxReno (), m_ackedBytesEcn (0), m_ackedBytesTotal (0),
+    m_priorRcvNxt (SequenceNumber32 (0)), m_priorRcvNxtFlag (false), 
+    m_nextSeq (SequenceNumber32 (0)), m_nextSeqFlag (false), m_ceState (false),
+    m_delayedAckReserved (false), m_initialized (false)
 {
+  printf("Hello from SWIFT-----------------------------------------Default\n");
   NS_LOG_FUNCTION (this);
   m_maxCwnd = 100000;
   m_minCwnd = 1;
@@ -96,21 +90,16 @@ TcpSwift::TcpSwift ()
   m_beta = -1 * m_alpha / sqrt(m_maxCwnd);
 }
 
-TcpSwift::TcpSwift (const TcpSwift& sock)
+Swift::Swift (const Swift& sock)
   : TcpLinuxReno (sock),
-    m_ackedBytesEcn (sock.m_ackedBytesEcn),
-    m_ackedBytesTotal (sock.m_ackedBytesTotal),
-    m_priorRcvNxt (sock.m_priorRcvNxt),
-    m_priorRcvNxtFlag (sock.m_priorRcvNxtFlag),
-    m_alpha (sock.m_alpha),
-    m_nextSeq (sock.m_nextSeq),
-    m_nextSeqFlag (sock.m_nextSeqFlag),
-    m_ceState (sock.m_ceState),
-    m_delayedAckReserved (sock.m_delayedAckReserved),
-    m_g (sock.m_g),
-    m_useEct0 (sock.m_useEct0),
-    m_initialized (sock.m_initialized)
+    m_ackedBytesEcn (sock.m_ackedBytesEcn), m_ackedBytesTotal (sock.m_ackedBytesTotal),
+    m_priorRcvNxt (sock.m_priorRcvNxt), m_priorRcvNxtFlag (sock.m_priorRcvNxtFlag),
+    m_alpha (sock.m_alpha), m_nextSeq (sock.m_nextSeq),
+    m_nextSeqFlag (sock.m_nextSeqFlag), m_ceState (sock.m_ceState),
+    m_delayedAckReserved (sock.m_delayedAckReserved), m_g (sock.m_g),
+    m_useEct0 (sock.m_useEct0), m_initialized (sock.m_initialized)
 {
+  printf("Hello from SWIFT--------------------------------------------Copy\n");
   NS_LOG_FUNCTION (this);
   m_maxCwnd = 100000;
   m_minCwnd = 1;
@@ -130,28 +119,24 @@ TcpSwift::TcpSwift (const TcpSwift& sock)
   m_maxRetries = 10;
 }
 
-TcpSwift::~TcpSwift (void)
-{
+Swift::~Swift (void) {
   NS_LOG_FUNCTION (this);
 }
 
-Ptr<TcpCongestionOps> TcpSwift::Fork (void)
-{
+Ptr<TcpCongestionOps> Swift::Fork (void) {
   NS_LOG_FUNCTION (this);
-  return CopyObject<TcpSwift> (this);
+  return CopyObject<Swift> (this);
 }
 
-uint32_t TcpSwift::clamp(uint32_t a, uint32_t b, uint32_t c){
+uint32_t Swift::clamp(uint32_t a, uint32_t b, uint32_t c) {
   return std::max(a, std::min(b, c));
 }
 
-void
-TcpSwift::Init (Ptr<TcpSocketState> tcb)
-{
+void Swift::Init (Ptr<TcpSocketState> tcb) {
   NS_LOG_FUNCTION (this << tcb);
-  NS_LOG_INFO (this << "Enabling SwiftEcn for DCTCP");
+  NS_LOG_INFO (this << "Enabling SwiftEcn for SWIFT");
   tcb->m_useEcn = TcpSocketState::On;
-  tcb->m_ecnMode = TcpSocketState::DctcpEcn;
+  tcb->m_ecnMode = TcpSocketState::SwiftEcn;
   tcb->m_ectCodePoint = m_useEct0 ? TcpSocketState::Ect0 : TcpSocketState::Ect1;
   m_initialized = true;
 }
@@ -159,15 +144,17 @@ TcpSwift::Init (Ptr<TcpSocketState> tcb)
 // Step 9, Section 3.3 of RFC 8257.  GetSsThresh() is called upon
 // entering the CWR state, and then later, when CWR is exited,
 // cwnd is set to ssthresh (this value).  bytesInFlight is ignored.
-uint32_t
-TcpSwift::GetSsThresh (Ptr<const TcpSocketState> tcb, uint32_t bytesInFlight)
-{
+uint32_t Swift::GetSsThresh (Ptr<const TcpSocketState> tcb, uint32_t bytesInFlight) {
   NS_LOG_FUNCTION (this << tcb << bytesInFlight);
   return static_cast<uint32_t> ((1 - m_alpha / 2.0) * tcb->m_cWnd);
 }
 
-void
-TcpSwift::IncreaseWindow(Ptr<TcpSocketState> tcb, uint32_t segmentsAcked){
+void Swift::UpdateTargetDelay(Ptr<TcpSocketState> tcb) {
+  m_targetDelay = m_baseDelay + (m_hops * m_hopScale);
+  m_targetDelay += std::max((double)0.0, std::min(1/sqrt((double)tcb->m_cWnd)+m_beta, (double)m_fSrange));
+}
+
+void Swift::IncreaseWindow(Ptr<TcpSocketState> tcb, uint32_t segmentsAcked) {
 
   //Add a section here for packets acked?
   //RTT info may not be easily accessible from this method
@@ -176,40 +163,40 @@ TcpSwift::IncreaseWindow(Ptr<TcpSocketState> tcb, uint32_t segmentsAcked){
 
   //If an ACK is recieved normally
   UpdateTargetDelay(tcb);
-  if(tcb->m_lastRtt.Get().GetMilliSeconds() < m_targetDelay){
-    if(tcb->m_cWnd.Get() > 1){
+  if(tcb->m_lastRtt.Get().GetNanoSeconds() < m_targetDelay) {
+    if(tcb->m_cWnd.Get() > 1) {
       //Does num_acked in the paper refer to the total acked?
       //Or does it mean the number acked this particular frame?
       tcb->m_cWnd = tcb->m_cWnd + (m_addIncrease / tcb->m_cWnd) * segmentsAcked;
     }
-    else{
+    else {
       tcb->m_cWnd = tcb->m_cWnd + (m_addIncrease * segmentsAcked);
     }
   }
-  else{
-    if(m_canDecrease){
+  else {
+    if(m_canDecrease) {
       tcb->m_cWnd = std::max(1 - (m_beta * (tcb->m_lastRtt.Get().GetNanoSeconds() - m_targetDelay)),
-		  1 - m_maxDecrease) * tcb->m_cWnd;
+      1 - m_maxDecrease) * tcb->m_cWnd;
     }
   }
 
 
   //Retransmission Timeout
-  if(tcb->m_congState == TcpSocketState::CA_LOSS){
+  if(tcb->m_congState == TcpSocketState::CA_LOSS) {
     m_retransmitCount++;
-    if(m_retransmitCount >= m_maxRetries){
+    if(m_retransmitCount >= m_maxRetries) {
       tcb->m_cWnd = m_minCwnd;
     }
-    else{
-      if(m_canDecrease){
+    else {
+      if(m_canDecrease) {
         tcb->m_cWnd = (1 - m_maxCwnd) * tcb->m_cWnd;
       }
     }
   }
 
   //Fast Recovery State
-  if(tcb->m_congState == TcpSocketState::CA_RECOVERY){
-    if(m_canDecrease){
+  if(tcb->m_congState == TcpSocketState::CA_RECOVERY) {
+    if(m_canDecrease) {
       tcb->m_cWnd = (1 - m_maxCwnd) * tcb->m_cWnd;
     }
   }
@@ -219,25 +206,17 @@ TcpSwift::IncreaseWindow(Ptr<TcpSocketState> tcb, uint32_t segmentsAcked){
   //But who knows where it is.
   
   tcb->m_cWnd = clamp(tcb->m_cWnd.Get(), m_minCwnd, m_maxCwnd);
-  if(tcb->m_cWnd.Get() <= m_cWndPrev){
+  if(tcb->m_cWnd.Get() <= m_cWndPrev) {
     m_lastDecrease = Simulator::Now();
   }
   m_cWndPrev = tcb->m_cWnd.Get();
   
 }
 
-void
-TcpSwift::UpdateTargetDelay(Ptr<TcpSocketState> tcb){
-  m_targetDelay = m_baseDelay + (m_hops * m_hopScale);
-  m_targetDelay += std::max((double)0.0, std::min(1/sqrt((double)tcb->m_cWnd)+m_beta, (double)m_fSrange));
-}
-
-void
-TcpSwift::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, const Time &rtt)
-{
+void Swift::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, const Time &rtt) {
   NS_LOG_FUNCTION (this << tcb << segmentsAcked << rtt);
   m_ackedBytesTotal += segmentsAcked * tcb->m_segmentSize;
-
+  
 /*
   m_retransmitCount = 0;
 
@@ -256,7 +235,7 @@ TcpSwift::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, const Time
   else{
     if(m_canDecrease){
       tcb->m_cWnd = std::max(1 - (m_beta * (delay - m_targetDelay)),
-		  1 - m_maxDecrease) * tcb->m_cWnd;
+      1 - m_maxDecrease) * tcb->m_cWnd;
     }
   }
 
@@ -295,32 +274,47 @@ TcpSwift::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, const Time
     }
 */
 
-  
+  /*
+  Old ack code
+  if (tcb->m_ecnState == TcpSocketState::ECN_ECE_RCVD)
+    {
+      m_ackedBytesEcn += segmentsAcked * tcb->m_segmentSize;
+    }
+  if (m_nextSeqFlag == false)
+    {
+      m_nextSeq = tcb->m_nextTxSequence;
+      m_nextSeqFlag = true;
+    }
+  if (tcb->m_lastAckedSeq >= m_nextSeq)
+    {
+      double bytesEcn = 0.0; // Corresponds to variable M in RFC 8257
+      if (m_ackedBytesTotal >  0)
+        {
+          bytesEcn = static_cast<double> (m_ackedBytesEcn * 1.0 / m_ackedBytesTotal);
+        }
+      m_alpha = (1.0 - m_g) * m_alpha + m_g * bytesEcn;
+      m_traceCongestionEstimate (m_ackedBytesEcn, m_ackedBytesTotal, m_alpha);
+      NS_LOG_INFO (this << "bytesEcn " << bytesEcn << ", m_alpha " << m_alpha);
+      Reset (tcb);
+    }*/
 }
 
-void
-TcpSwift::InitializeDctcpAlpha (double alpha)
-{
+void Swift::InitializeSwiftAlpha (double alpha) {
   NS_LOG_FUNCTION (this << alpha);
-  NS_ABORT_MSG_IF (m_initialized, "DCTCP has already been initialized");
+  NS_ABORT_MSG_IF (m_initialized, "Swift has already been initialized");
   m_alpha = alpha;
 }
 
-void
-TcpSwift::Reset (Ptr<TcpSocketState> tcb)
-{
+void Swift::Reset (Ptr<TcpSocketState> tcb) {
   NS_LOG_FUNCTION (this << tcb);
   m_nextSeq = tcb->m_nextTxSequence;
   m_ackedBytesEcn = 0;
   m_ackedBytesTotal = 0;
 }
 
-void
-TcpSwift::CeState0to1 (Ptr<TcpSocketState> tcb)
-{
+void Swift::CeState0to1 (Ptr<TcpSocketState> tcb) {
   NS_LOG_FUNCTION (this << tcb);
-  if (!m_ceState && m_delayedAckReserved && m_priorRcvNxtFlag)
-    {
+  if (!m_ceState && m_delayedAckReserved && m_priorRcvNxtFlag) {
       SequenceNumber32 tmpRcvNxt;
       /* Save current NextRxSequence. */
       tmpRcvNxt = tcb->m_rxBuffer->NextRxSequence ();
@@ -333,8 +327,7 @@ TcpSwift::CeState0to1 (Ptr<TcpSocketState> tcb)
       tcb->m_rxBuffer->SetNextRxSequence (tmpRcvNxt);
     }
 
-  if (m_priorRcvNxtFlag == false)
-    {
+  if (m_priorRcvNxtFlag == false) {
       m_priorRcvNxtFlag = true;
     }
   m_priorRcvNxt = tcb->m_rxBuffer->NextRxSequence ();
@@ -343,52 +336,44 @@ TcpSwift::CeState0to1 (Ptr<TcpSocketState> tcb)
 }
 
 void
-TcpSwift::CeState1to0 (Ptr<TcpSocketState> tcb)
-{
+Swift::CeState1to0 (Ptr<TcpSocketState> tcb) {
   NS_LOG_FUNCTION (this << tcb);
-  if (m_ceState && m_delayedAckReserved && m_priorRcvNxtFlag)
-    {
-      SequenceNumber32 tmpRcvNxt;
-      /* Save current NextRxSequence. */
-      tmpRcvNxt = tcb->m_rxBuffer->NextRxSequence ();
+  if (m_ceState && m_delayedAckReserved && m_priorRcvNxtFlag) {
+    SequenceNumber32 tmpRcvNxt;
+    /* Save current NextRxSequence. */
+    tmpRcvNxt = tcb->m_rxBuffer->NextRxSequence ();
 
-      /* Generate previous ACK with ECE */
-      tcb->m_rxBuffer->SetNextRxSequence (m_priorRcvNxt);
-      tcb->m_sendEmptyPacketCallback (TcpHeader::ACK | TcpHeader::ECE);
+    /* Generate previous ACK with ECE */
+    tcb->m_rxBuffer->SetNextRxSequence (m_priorRcvNxt);
+    tcb->m_sendEmptyPacketCallback (TcpHeader::ACK | TcpHeader::ECE);
 
-      /* Recover current RcvNxt. */
-      tcb->m_rxBuffer->SetNextRxSequence (tmpRcvNxt);
-    }
+    /* Recover current RcvNxt. */
+    tcb->m_rxBuffer->SetNextRxSequence (tmpRcvNxt);
+  }
 
-  if (m_priorRcvNxtFlag == false)
-    {
-      m_priorRcvNxtFlag = true;
-    }
+  if (m_priorRcvNxtFlag == false) {
+    m_priorRcvNxtFlag = true;
+  }
   m_priorRcvNxt = tcb->m_rxBuffer->NextRxSequence ();
   m_ceState = false;
 
-  if (tcb->m_ecnState == TcpSocketState::ECN_CE_RCVD || tcb->m_ecnState == TcpSocketState::ECN_SENDING_ECE)
-    {
-      tcb->m_ecnState = TcpSocketState::ECN_IDLE;
-    }
+  if (tcb->m_ecnState == TcpSocketState::ECN_CE_RCVD || tcb->m_ecnState == TcpSocketState::ECN_SENDING_ECE) {
+    tcb->m_ecnState = TcpSocketState::ECN_IDLE;
+  }
 }
 
 void
-TcpSwift::UpdateAckReserved (Ptr<TcpSocketState> tcb,
-                             const TcpSocketState::TcpCAEvent_t event)
-{
+Swift::UpdateAckReserved (Ptr<TcpSocketState> tcb,
+                             const TcpSocketState::TcpCAEvent_t event) {
   NS_LOG_FUNCTION (this << tcb << event);
-  switch (event)
-    {
+  switch (event) {
     case TcpSocketState::CA_EVENT_DELAYED_ACK:
-      if (!m_delayedAckReserved)
-        {
+      if (!m_delayedAckReserved) {
           m_delayedAckReserved = true;
         }
       break;
     case TcpSocketState::CA_EVENT_NON_DELAYED_ACK:
-      if (m_delayedAckReserved)
-        {
+      if (m_delayedAckReserved) {
           m_delayedAckReserved = false;
         }
       break;
@@ -398,13 +383,10 @@ TcpSwift::UpdateAckReserved (Ptr<TcpSocketState> tcb,
     }
 }
 
-void
-TcpSwift::CwndEvent (Ptr<TcpSocketState> tcb,
-                     const TcpSocketState::TcpCAEvent_t event)
-{
+void Swift::CwndEvent (Ptr<TcpSocketState> tcb,
+                     const TcpSocketState::TcpCAEvent_t event) {
   NS_LOG_FUNCTION (this << tcb << event);
-  switch (event)
-    {
+  switch (event) {
     case TcpSocketState::CA_EVENT_ECN_IS_CE:
       CeState0to1 (tcb);
       break;
@@ -418,7 +400,7 @@ TcpSwift::CwndEvent (Ptr<TcpSocketState> tcb,
     default:
       /* Don't care for the rest. */
       break;
-    }
+  }
 }
 
 } // namespace ns3
