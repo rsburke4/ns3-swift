@@ -188,7 +188,7 @@ TcpSwift::IncreaseWindow(Ptr<TcpSocketState> tcb, uint32_t segmentsAcked){
   }
   else{
     if(m_canDecrease){
-      tcb->m_cWnd = std::max(1 - (m_beta * (tcb->m_lastRtt.Get().GetNanoSeconds() - m_targetDelay)),
+      tcb->m_cWnd = std::max(1 - (m_beta * (tcb->m_lastRtt.Get().GetMilliSeconds() - m_targetDelay)),
 		  1 - m_maxDecrease) * tcb->m_cWnd;
     }
   }
@@ -241,7 +241,7 @@ TcpSwift::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, const Time
 /*
   m_retransmitCount = 0;
 
-  double delay = rtt.GetNanoSeconds();
+  double delay = rtt.GetMilliSeconds();
   UpdateTargetDelay();
   if(delay < m_targetDelay){
     if(tcb->m_cWnd > 1){
