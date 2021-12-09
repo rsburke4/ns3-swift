@@ -188,7 +188,7 @@ TcpSwift::IncreaseWindow(Ptr<TcpSocketState> tcb, uint32_t segmentsAcked){
   }
   else{
     if(m_canDecrease){
-      tcb->m_cWnd = std::max(1 - (m_beta * (tcb->m_lastRtt.Get().GetMilliSeconds() - m_targetDelay)),
+      tcb->m_cWnd = std::max(1 - (m_beta * ((tcb->m_lastRtt.Get().GetMilliSeconds() - m_targetDelay)/tcb->m_lastRtt.Get().GetMilliSeconds())),
 		  1 - m_maxDecrease) * tcb->m_cWnd;
     }
   }
@@ -237,64 +237,6 @@ TcpSwift::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked, const Time
 {
   NS_LOG_FUNCTION (this << tcb << segmentsAcked << rtt);
   m_ackedBytesTotal += segmentsAcked * tcb->m_segmentSize;
-
-/*
-  m_retransmitCount = 0;
-
-  double delay = rtt.GetMilliSeconds();
-  UpdateTargetDelay();
-  if(delay < m_targetDelay){
-    if(tcb->m_cWnd > 1){
-      //Does num_acked in the paper refer to the total acked?
-      //Or does it mean the number acked this particular frame?
-      tcb->m_cWnd = tcb->m_cWnd + (m_addIncrease / tcb->m_cWnd) * segmentsAcked;
-    }
-    else{
-      tcb->m_cWnd = tcb->m_cWnd + (m_addIncrease * segmentsAcked);
-    }
-  }
-  else{
-    if(m_canDecrease){
-      tcb->m_cWnd = std::max(1 - (m_beta * (delay - m_targetDelay)),
-		  1 - m_maxDecrease) * tcb->m_cWnd;
-    }
-  }
-
-
-  //This redundancy is because I'm not
-  //sure whether this, or IncreaseWindow is called
-  //last, but it doesn't hurt to ensure cWnd is
-  //within bounds an extra time
-  tcb->m_cWnd = std::clamp(tcb->m_cWnd, m_minCwnd, m_maxCwnd);
-  if(tcb->m_cWnd <= m_cWndPrev){
-    m_lastDecrease = Simulator::Now();
-  }
-  m_cWndPrev = tcb->m_cWnd;
-  m_canDecrease = (Simulator::Now() - m_lastDecrease >= rtt);
-*/
-/*  if (tcb->m_ecnState == TcpSocketState::ECN_ECE_RCVD)
-    {
-      m_ackedBytesEcn += segmentsAcked * tcb->m_segmentSize;
-    }
-  if (m_nextSeqFlag == false)
-    {
-      m_nextSeq = tcb->m_nextTxSequence;
-      m_nextSeqFlag = true;
-    }
-  if (tcb->m_lastAckedSeq >= m_nextSeq)
-    {
-      double bytesEcn = 0.0; // Corresponds to variable M in RFC 8257
-      if (m_ackedBytesTotal >  0)
-        {
-          bytesEcn = static_cast<double> (m_ackedBytesEcn * 1.0 / m_ackedBytesTotal);
-        }
-      m_alpha = (1.0 - m_g) * m_alpha + m_g * bytesEcn;
-      m_traceCongestionEstimate (m_ackedBytesEcn, m_ackedBytesTotal, m_alpha);
-      NS_LOG_INFO (this << "bytesEcn " << bytesEcn << ", m_alpha " << m_alpha);
-      Reset (tcb);
-    }
-*/
-
   
 }
 
